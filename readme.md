@@ -186,4 +186,3 @@ node index.js
 
 - Make sure the **AI service (port 8000) runs before the backend**  
 - Make sure the **backend (port 5001) runs before the frontend**  
-- If u
