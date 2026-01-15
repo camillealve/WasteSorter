@@ -1,49 +1,61 @@
+# ai-service/main.py
 from fastapi import FastAPI
 from pydantic import BaseModel
+import openai
+import os
 import json
+
+# Make sure your OpenAI API key is set in environment
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+if not openai.api_key:
+    raise ValueError("OpenAI API key not found! Set OPENAI_API_KEY environment variable.")
 
 app = FastAPI()
 
-# Load rules once at startup
-with open("rules.json") as f:
-    rules = json.load(f)
-
-class AnalyzeRequest(BaseModel):
+class ProductRequest(BaseModel):
     barcode: str
     city: str
 
-# Simple eco tips for demo
-eco_tips = {
-    "PET plastic": "Rinse and place in blue bin; reuse bottles when possible.",
-    "organic": "Compost to reduce landfill waste.",
-    "aluminum": "Recycle in metal bin; cans can be reused.",
-    "unknown material": "Dispose in garbage responsibly."
-}
-
 @app.post("/analyze")
-def analyze(req: AnalyzeRequest):
-    # Step 1: Barcode → product inference
-    barcode_map = {
-        "123456789": ("plastic bottle", "PET plastic"),
-        "987654321": ("banana peel", "organic"),
-        "555555555": ("aluminum can", "aluminum")
-    }
+def analyze(request: ProductRequest):
+    barcode = request.barcode
+    city = request.city
 
-    product_type, material = barcode_map.get(
-        req.barcode, ("unknown item", "unknown material")
+    prompt = (
+        f"You are an AI that identifies products from barcodes.\n"
+        f"Barcode: {barcode}\n"
+        f"City: {city}\n"
+        "Identify the product type, material, appropriate disposal category "
+        "(e.g., Recycling, Compost, Garbage), and give a short disposal explanation. "
+        "Return ONLY valid JSON with keys: product_type, material, category, explanation."
     )
 
-    # Step 2: Material → disposal category
-    city_rules = rules.get(req.city, rules.get("Toronto"))  # default Toronto
-    category = city_rules.get(material, "Garbage")
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
 
-    # Step 3: Generate explanation
-    explanation = f"{product_type.capitalize()} made of {material} should go in {category}. {eco_tips.get(material,'Dispose responsibly.')}"
+        text = response.choices[0].message.content
 
-    return {
-        "barcode": req.barcode,
-        "product_type": product_type,
-        "material": material,
-        "category": category,
-        "explanation": explanation
-    }
+        # Ensure valid JSON
+        try:
+            data = json.loads(text)
+            return data
+        except json.JSONDecodeError:
+            return {
+                "product_type": "Unknown item",
+                "material": "Unknown",
+                "category": "Unknown",
+                "explanation": f"AI could not parse product info for barcode {barcode}."
+            }
+
+    except Exception as e:
+        return {
+            "product_type": "Unknown item",
+            "material": "Unknown",
+            "category": "Unknown",
+            "explanation": f"Error querying AI: {str(e)}"
+        }
