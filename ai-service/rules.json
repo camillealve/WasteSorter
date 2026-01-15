@@ -1,0 +1,15 @@
+{
+    "Toronto": {
+      "PET plastic": "Recycling",
+      "organic": "Green Bin",
+      "aluminum": "Recycling",
+      "unknown material": "Garbage"
+    },
+    "Mississauga": {
+      "PET plastic": "Recycling",
+      "organic": "Garbage",
+      "aluminum": "Recycling",
+      "unknown material": "Garbage"
+    }
+  }
+  
