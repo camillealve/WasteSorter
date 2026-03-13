@@ -6,10 +6,12 @@ import os
 import json
 
 # Make sure your OpenAI API key is set in environment
-openai.api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
 
-if not openai.api_key:
+if not api_key:
     raise ValueError("OpenAI API key not found! Set OPENAI_API_KEY environment variable.")
+
+client = openai.OpenAI(api_key=api_key)
 
 app = FastAPI()
 
@@ -32,7 +34,7 @@ def analyze(request: ProductRequest):
     )
 
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0
